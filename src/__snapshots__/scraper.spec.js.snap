@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Scraper component test suite Should properly parse the HTML and generate components 1`] = `
+"import React from 'react';
+import styled from 'styled-components';
+const Div = styled.div\`\`;
+
+export const Application = props => {
+    return (
+        <div>
+            <Div className={'test'} />
+        </div>
+    );
+};
+"
+`;
