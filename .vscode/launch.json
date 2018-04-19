@@ -7,8 +7,11 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch CLI",
             "program": "${workspaceFolder}/bin/cli.js",
+            "args": [
+                "generate"
+            ],
             "env": {
                 "DEBUG": "react-puppet:*"
             }

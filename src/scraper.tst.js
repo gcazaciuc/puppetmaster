@@ -34,4 +34,10 @@ describe('Scraper component test suite', () => {
         expect(firstCall[0]).toBe('Application.js');
         expect(firstCall[1]).toMatchSnapshot();
     });
+    it('Should properly parse the HTML containing style tags and generate proper styled components', async () => {
+        await scraper.scrape('file:///home/gabrielcazaciuc/react-puppet/fixtures/with-style-tag.html');
+        const [firstCall] = projectFilesGenerator.generateComponent.mock.calls;
+        expect(firstCall[0]).toBe('Application.js');
+        expect(firstCall[1]).toMatchSnapshot();
+    });
 });

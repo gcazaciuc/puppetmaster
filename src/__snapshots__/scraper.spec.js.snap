@@ -3,12 +3,41 @@
 exports[`Scraper component test suite Should properly parse the HTML and generate components 1`] = `
 "import React from 'react';
 import styled from 'styled-components';
-const Div = styled.div\`\`;
 
 export const Application = props => {
     return (
         <div>
-            <Div className={'test'} />
+            <div className={'test'} />
+        </div>
+    );
+};
+"
+`;
+
+exports[`Scraper component test suite Should properly parse the HTML containing style tags and generate proper styled components 1`] = `
+"import React from 'react';
+import styled from 'styled-components';
+const Div = styled.div\`
+    color: rgb(0, 128, 0);
+    margin-bottom: 20px;
+    margin-left: 30px;
+    margin-right: 30px;
+    margin-top: 20px;
+\`;
+const Div1 = styled.div\`
+    color: rgb(0, 0, 255);
+    margin-bottom: 20px;
+    margin-left: 30px;
+    margin-right: 30px;
+    margin-top: 20px;
+\`;
+
+export const Application = props => {
+    return (
+        <div>
+            <Div1 className={'test'}>
+                <Div />
+            </Div1>
         </div>
     );
 };

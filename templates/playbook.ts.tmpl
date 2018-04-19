@@ -1,0 +1,10 @@
+// Entities that should be persisted server side. REST API routes will be created for each one
+interface UserEntity {
+    name: string;
+    email: string;
+
+}
+// Application views specifications
+interface ApplicationView {
+    currentUser: UserEntity;
+}
