@@ -10,24 +10,11 @@ const ReactAttributesMap = {
     'tabindex': 'tabIndex'
 }
 
-class ViewGenerator extends CodeGenerator {
-    createMarkup(el, parentEl) {
-        if (typeof el === 'string') {
-            return b.jsxExpressionContainer(b.literal(el));
-        }
-        const children = el.props.map((child) => {
-            const customComponentParent = el.custom ? el : parentEl;
-            return this.createMarkup(child, customComponentParent);
-        });
-        el.markup = children;
-        if (!el.custom) {
-            let styledName = el.componentName;
-            return this.createElement(styledName, children, el.props);
-        }
-        if (parentEl && parentEl !== el) {
-            parentEl.imports.push(el);
-        }
-        return this.createElement(el.componentName);
+class ReactViewGenerator extends CodeGenerator {
+    constructor(nameGenerator) {
+        super();
+        this.nameGenerator = nameGenerator;
+        this.createView = this.createView.bind(this);
     }
     createElement(name, children = [], attrs = []) {
         return b.jsxElement(
@@ -76,53 +63,70 @@ class ViewGenerator extends CodeGenerator {
             );
         });
     }
-    createStandardPropDisplay(p) {
-        const node = p.parent ? b.memberExpression(
-            b.identifier('props'),
-            b.identifier(p.parent)
-        ) : b.identifier('props');
-
+    renderAsText(p) {
         const children = [
             b.jsxExpressionContainer(
-                b.memberExpression(
-                    node,
-                    b.identifier(p.name)
-                )
+                this.getPropAccess(p)
             )
         ];
         return this.createElement('div', children);
     }
-    createCustomPropDisplay(p) {
+    renderAsReadonlyObject(p) {
         const childName = p.viewName || p.name;
-        const node = p.parent ? b.memberExpression(
-            b.identifier('props'),
-            b.identifier(p.parent)
-        ) : b.identifier('props');
         return this.createElement(childName, [], {
-            [p.name]: b.memberExpression(
-                node,
-                b.identifier(p.name)
-            )
+            [p.name]: this.getPropAccess(p)
         });
     }
+    renderAsList(p) {
+        const callbackFn = b.arrowFunctionExpression(
+            [b.identifier(p.elementModel.name)],
+            this.createView(p.elementModel)
+        );
+        const itemMapping = b.callExpression(
+            b.memberExpression(
+                this.getPropAccess(p),
+                b.identifier('map')
+            ),
+            [callbackFn]
+        );
+        return b.jsxExpressionContainer(itemMapping);
+    }
+    getPropAccess(p) {
+        const node = p.parentPropName ? b.memberExpression(
+            b.identifier('props'),
+            b.identifier(p.parentPropName)
+        ) : b.identifier('props');
+
+        return b.memberExpression(
+            node,
+            b.identifier(p.name)
+        );
+    }
     createComponent(el) {
-        const componentBodyAst = el.props.map((p) => {
-            if (p.standard) {
-                return this.createStandardPropDisplay(p);
-            }
-            return this.createCustomPropDisplay(p);
-        });
+        const componentBodyAst = el.props.map(this.createView);
 
         return b.arrowFunctionExpression(
             [b.identifier('props')],
             b.blockStatement(
                 [
                     b.returnStatement(
-                        this.createElement(el.tag, componentBodyAst)
+                        this.createElement('div', componentBodyAst)
                     )
                 ]
             )
         )
+    }
+    createView(p) {
+        const viewPresenters = {
+            'text': this.renderAsText,
+            'list': this.renderAsList,
+            'object': this.renderAsReadonlyObject
+        }
+        if (viewPresenters[p.presenter]) {
+            return viewPresenters[p.presenter].call(this, p);
+        } else {
+            console.log('No presenter found for:', JSON.stringify(p));
+        }
     }
     _makeObservable(reactComponent) {
         return b.callExpression(
@@ -151,4 +155,4 @@ class ViewGenerator extends CodeGenerator {
 }
 
 
-module.exports = ViewGenerator;
+module.exports = ReactViewGenerator;

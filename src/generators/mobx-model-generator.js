@@ -4,7 +4,11 @@ const recast = require('recast');
 // @ts-ignore
 const b = recast.types.builders;
 
-class ModelGenerator extends CodeGenerator {
+class MobxModelGenerator extends CodeGenerator {
+    constructor(nameGenerator) {
+        super();
+        this.nameGenerator = nameGenerator;
+    }
     createModelComponentFile(el) {
         const componentName = el.name;
         const elImports = el.imports.slice(0);
@@ -64,4 +68,4 @@ class ModelGenerator extends CodeGenerator {
     }
 }
 
-module.exports = ModelGenerator;
+module.exports = MobxModelGenerator;

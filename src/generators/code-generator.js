@@ -1,22 +1,14 @@
 //@ts-check
 const recast = require('recast');
 const parser = require('flow-parser');
-const prettier = require("prettier");
 const _ = require('lodash');
 // @ts-ignore
 const b = recast.types.builders;
-const ReactAttributesMap = {
-    'class': 'className',
-    'for': 'htmlFor',
-    'tabindex': 'tabIndex'
-}
-const printOptions = {
-    tabWidth: 4,
-    singleQuote: true,
-    jsxBracketSameLine: true
-};
 
 class CodeGenerator {
+    constructor() {
+        
+    }
     createImports(elImports) {
         return _.uniqBy(elImports || [], (e) => e.source).map((imp) => {
             return this.createNamedImport(imp);
@@ -44,13 +36,6 @@ class CodeGenerator {
             ],
             b.literal(source)
         )
-    }
-    formatCode(codeAst) {
-        return prettier.format(
-            // @ts-ignore
-            recast.print(codeAst).code
-            ,printOptions
-        );
     }
 }
 

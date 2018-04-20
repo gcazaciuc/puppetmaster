@@ -1,56 +1,76 @@
 const path = require('path');
 const cosmiconfig = require('cosmiconfig');
 const Scraper = require('./scraper');
-const CodeBuilder = require('./code-builder');
+const CodeBuilder = require('./builders/code-builder');
 const ProjectFilesGenerator = require('./project-files-generator');
-const { ModelGenerator, ViewGenerator } = require('./code-generator');
+const PlaybookParser = require('./playbook-parser');
+const { GeneratorsFactory, CodeFormatter } = require('./generators');
 
 class Runner {
     constructor() {
         this.projectFilesGenerator = new ProjectFilesGenerator();
-        this.modelGenerator = new ModelGenerator();
-        this.viewGenerator = new ViewGenerator();
+        this.generatorsFactory = new GeneratorsFactory(this.projectFilesGenerator);
+        this.playbookParser = new PlaybookParser();
         this.codeBuilder = new CodeBuilder();
+        this.formatter = new CodeFormatter();
         this.explorer = cosmiconfig('puppetmaster');
     }
-    _createView(view, config) {
-        const codeAst = this.viewGenerator.createViewComponentFile(view, config);
-        this._writeCode(view, codeAst);
+    createView(view, config) {
+        const viewGenerator = this.generatorsFactory.getViewGenerator();
+        const codeAst = viewGenerator.createViewComponentFile(view, config);
+        this.writeCode(view, codeAst);
     }
-    _createModel(model, config) {
-        const codeAst = this.modelGenerator.createModelComponentFile(model, config);
-        this._writeCode(model, codeAst, 'models');
+    createModel(model, config) {
+        const modelGenerator = this.generatorsFactory.getModelGenerator();
+        const codeAst = modelGenerator.createModelComponentFile(model, config);
+        this.writeCode(model, codeAst, 'models');
     }
-    _writeCode(spec, codeAst, dir = 'components') {
+    writeCode(spec, codeAst, dir = 'components') {
         const filename = `${spec.viewName || spec.name}.js`;
-        const code = this.viewGenerator.formatCode(codeAst);
+        const code = this.formatter.format(codeAst);
         this.projectFilesGenerator.generateComponent(filename, code, dir);
     }
-    _createProjectFiles(config) {
-        const tasks = {
-            views: (view) => this._createView(view, config),
-            models: (model) => this._createModel(model, config)
-        }
+    executeTasks(config, tasks) {
         Object.keys(config).forEach((k) => {
             if (tasks[k]) {
-                Object.keys(config[k]).forEach((name) => {
-                    const item = config[k][name];
-                    tasks[k].call(this, item);
+                const models = config[k];
+                models.forEach((model) => {
+                    tasks[k].call(this, model);
                 });
             }
         });
     }
-    loadConfig() {
-        return this.explorer.load();
+    createProjectFiles(config) {
+        const tasks = {
+            views: (view) => this.createView(view, config),
+            clientEntities: (model) => this.createModel(model, config)
+        }
+        this.executeTasks(config, tasks);
+    }
+    async loadConfig() {
+        const { config } = await this.explorer.load();
+        const finalConfig = Object.assign({}, {
+            playbook: './playbook.ts',
+            frameworks: {
+                ui: 'react',
+                state: 'mobx'
+            }
+        }, config);
+
+        return finalConfig;
     }
     async run(options) {
         if (options._[0] === 'new') {
             this.projectFilesGenerator.initNewProject(options.output);
         }
         if (options._[0] === 'generate') {
-            const { config } = await this.loadConfig();
-            const projectSpec = this.codeBuilder.build(path.resolve(config.playbook));
-            this._createProjectFiles(projectSpec);
+            const config = await this.loadConfig();
+            const playbookPath = path.resolve(config.playbook);
+            this.generatorsFactory.setConfig(config);
+            const modelRegistry = this.playbookParser.parse(playbookPath);
+            this.codeBuilder.setModelRegistry(modelRegistry);
+            const projectSpec = this.codeBuilder.build();
+            this.createProjectFiles(projectSpec);
         }
     }
 }
